@@ -82,6 +82,7 @@ contract SimpleStorage {
     constructor(uint256 _initialNumber) {
         owner = msg.sender;
         storedNumber = _initialNumber;
+        // Note: First number set, so old value is implicitly 0
         emit NumberChanged(0, _initialNumber, msg.sender);
     }
     

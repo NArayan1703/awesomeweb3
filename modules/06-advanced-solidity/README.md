@@ -251,7 +251,8 @@ contract SimpleAMM {
     
     // x * y = k (constant product formula)
     function swap(address tokenIn, uint256 amountIn) external {
-        require(tokenIn == address(tokenA) || tokenIn == address(tokenB));
+        require(tokenIn == address(tokenA) || tokenIn == address(tokenB), "Invalid token");
+        require(amountIn > 0, "Amount must be positive");
         
         bool isTokenA = tokenIn == address(tokenA);
         (IERC20 tokenInContract, IERC20 tokenOutContract, uint256 reserveIn, uint256 reserveOut) 
@@ -261,8 +262,14 @@ contract SimpleAMM {
         
         tokenInContract.transferFrom(msg.sender, address(this), amountIn);
         
-        uint256 amountOut = (reserveOut * amountIn) / (reserveIn + amountIn);
+        // Using constant product formula with fee (0.3%)
+        // Note: In production, use more robust math with slippage protection
+        uint256 amountInWithFee = amountIn * 997;
+        uint256 numerator = amountInWithFee * reserveOut;
+        uint256 denominator = (reserveIn * 1000) + amountInWithFee;
+        uint256 amountOut = numerator / denominator;
         
+        require(amountOut > 0, "Insufficient output amount");
         tokenOutContract.transfer(msg.sender, amountOut);
         
         // Update reserves

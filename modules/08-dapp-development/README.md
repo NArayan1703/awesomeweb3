@@ -124,15 +124,26 @@ import { useContractWrite, usePrepareContractWrite, useWaitForTransaction } from
 function TransferToken() {
   const [to, setTo] = useState('');
   const [amount, setAmount] = useState('');
+  const [error, setError] = useState('');
+
+  // Validate inputs
+  const isValidAddress = ethers.isAddress(to);
+  const isValidAmount = amount && !isNaN(amount) && parseFloat(amount) > 0;
 
   const { config } = usePrepareContractWrite({
     address: '0x...',
     abi: tokenABI,
     functionName: 'transfer',
-    args: [to, ethers.parseEther(amount)],
+    args: [to, isValidAmount ? ethers.parseEther(amount) : 0],
+    enabled: isValidAddress && isValidAmount,
   });
 
-  const { write, data } = useContractWrite(config);
+  const { write, data } = useContractWrite({
+    ...config,
+    onError(error) {
+      setError(error.message);
+    }
+  });
   
   const { isLoading, isSuccess } = useWaitForTransaction({
     hash: data?.hash,
@@ -145,14 +156,20 @@ function TransferToken() {
         value={to} 
         onChange={(e) => setTo(e.target.value)} 
       />
+      {to && !isValidAddress && <div className="error">Invalid address</div>}
       <input 
         placeholder="Amount" 
         value={amount} 
         onChange={(e) => setAmount(e.target.value)} 
       />
-      <button onClick={() => write()} disabled={isLoading}>
+      {amount && !isValidAmount && <div className="error">Invalid amount</div>}
+      <button 
+        onClick={() => write()} 
+        disabled={!isValidAddress || !isValidAmount || isLoading}
+      >
         {isLoading ? 'Sending...' : 'Transfer'}
       </button>
+      {error && <div className="error">{error}</div>}
       {isSuccess && <div>Transaction successful!</div>}
     </div>
   );
